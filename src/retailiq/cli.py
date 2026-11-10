@@ -32,8 +32,8 @@ def main() -> None:
     joined = feature_rows.merge(pred[["date", "store_id", "product_id", "prediction"]],
                                 on=["date", "store_id", "product_id"], how="inner", validate="one_to_one")
     evaluated = evaluate_inventory(joined)
-    evaluated[["date", "store_id", "product_id", "latent_demand", "prediction", "ml_stock", "baseline_stock",
-               "ml_cost", "baseline_cost", "ml_stockout_units", "baseline_stockout_units"]].to_csv(out / "inventory_decisions.csv", index=False)
+    evaluated[["date", "store_id", "product_id", "latent_demand", "prediction", "ml_stock", "baseline_stock", "naive_newsvendor_stock",
+               "ml_cost", "baseline_cost", "naive_newsvendor_cost", "ml_stockout_units", "baseline_stockout_units", "naive_newsvendor_stockout_units"]].to_csv(out / "inventory_decisions.csv", index=False)
     impact = summarize_inventory(evaluated)
     (out / "inventory_summary.json").write_text(json.dumps(impact, indent=2))
     print(json.dumps({"forecast": score, "inventory": impact}, indent=2))
