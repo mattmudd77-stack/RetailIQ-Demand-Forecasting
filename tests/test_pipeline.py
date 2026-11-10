@@ -54,3 +54,26 @@ def test_end_to_end(tmp_path):
     joined = feat.merge(preds[["date", "store_id", "product_id", "prediction"]], on=["date", "store_id", "product_id"])
     impact = summarize_inventory(evaluate_inventory(joined))
     assert np.isfinite(impact["ml_cost"])
+
+
+def test_three_policy_comparison_is_paired():
+    """The policy-only and model-only contrasts share realized demand and costs."""
+    frame = pd.DataFrame({
+        "latent_demand": [10., 20., 30.],
+        "lag_7": [8., 22., 28.],
+        "prediction": [9., 21., 29.],
+    })
+    evaluated = evaluate_inventory(frame)
+    assert set(["baseline_cost", "naive_newsvendor_cost", "ml_cost"]).issubset(evaluated.columns)
+    assert (evaluated.naive_newsvendor_stock >= evaluated.baseline_stock).all()
+    summary = summarize_inventory(evaluated)
+    assert "model_incremental_reduction_pct" in summary
+    assert "policy_only_reduction_pct" in summary
+
+
+def test_simulator_expected_demand_is_oracle_only():
+    raw = generate_data(110, 1, 1)
+    assert "expected_demand" in raw
+    assert (raw.expected_demand > 0).all()
+    from retailiq.features import FEATURES
+    assert "expected_demand" not in FEATURES
