@@ -6,32 +6,46 @@
 
 ## Results at a glance
 
-The following results are from the checked-in seeded **synthetic** dataset. Model selection uses two expanding-window validation folds; the final holdout is later in time.
+**Synthetic, one-step-ahead historical backtest.** Lag features use observed prior-day latent demand, so these numbers do **not** represent recursive multi-day forecasting.
 
-| Forecast model | Mean validation WAPE ↓ |
-| --- | ---: |
-| Seasonal naive (same weekday last week, `lag_7`) | **28.71%** |
-| Random Forest | 18.70% |
-| Histogram Gradient Boosting | 18.59% |
-| **LightGBM (selected)** | **18.47%** |
-
-**One-step-ahead historical holdout (uses observed prior-day demand) — selected LightGBM:** **17.43% WAPE**, **4.15 MAE**, **5.32 RMSE**, and **+0.64 mean bias**, across **5,664 store–SKU–day rows** (December 27, 2024–February 23, 2025). The seasonal-naive figure above is a *validation* score, **not** a measured baseline holdout score; don't interpret the difference as a holdout improvement. **Updated code now calculates the naive holdout WAPE and a simulator-only oracle (true Poisson mean) reference**; the values will appear in regenerated `artifacts/metrics.json`. The oracle is an informational noise-floor benchmark, not a deployable forecasting model. The three ML validation scores (18.47%, 18.59%, 18.70%) are close: LightGBM is the numerical winner, not evidence of a meaningful performance gap.
-
-### Illustrative inventory simulation
-
-| Policy | Hypothetical total cost | Stockout units |
+| Forecast reference | Validation WAPE | Same-period holdout WAPE |
 | --- | ---: | ---: |
-| Seasonal-naive inventory baseline | $260,493 | 16,339 |
-| Model-based newsvendor policy | $127,911 | 2,636 |
-| **Difference (unadjusted policies)** | **−$132,582 (−50.9%)** | **−13,703** |
+| Seasonal naive (lag 7) | 28.71% | **28.02%** |
+| Random forest | 18.70% | — |
+| Histogram gradient boosting | 18.59% | — |
+| **LightGBM (selected)** | **18.47%** | **17.43%** |
+| Oracle: true simulator expected demand | — | **15.74%** |
 
-**Important comparison caveat:** These checked-in figures compare a naive order-the-forecast policy **without** safety stock against ML + newsvendor **with** safety stock. They do **not** isolate the forecast model's incremental contribution. The updated pipeline now evaluates a third policy, **seasonal naive + the same newsvendor rule**. Run the pipeline to regenerate the three-way results before making any incremental-savings claim. These are simulated scenario outcomes, not realized retailer savings.
+**LightGBM holdout:** MAE **4.15**, RMSE **5.32**, mean forecast bias **+0.64** across **5,664** store–product–day observations (Dec 27, 2024–Feb 23, 2025). LightGBM won by lowest mean validation WAPE, but the three ML candidates are close; the results do not establish a statistically significant ranking. The oracle knows the synthetic demand-generating mean and is **not deployable**.
 
-![Forecast model validation comparison](docs/validation-wape.svg)
+### Inventory impact under matched policies
 
-![Illustrative inventory cost comparison](docs/inventory-cost.svg)
+| Inventory policy | Hypothetical cost | Stockout units |
+| --- | ---: | ---: |
+| Seasonal naive, order the forecast | $260,493 | 16,339 |
+| Seasonal naive + newsvendor safety stock | $211,674 | 7,920 |
+| **LightGBM + the same newsvendor rule** | **$127,911** | **2,636** |
 
-**Try it locally:** `pip install -e '.[dev,boost]'` → `retailiq --out artifacts` → `streamlit run dashboard.py`. No public hosted dashboard is currently claimed.
+**Incremental simulated cost reduction from the ML forecast: 39.57%** versus naive + newsvendor (a difference of **$83,763**). Adding the policy alone reduces the naive cost by **18.74%**. The combined reduction against ordering the naive forecast directly is **50.90%**, but **that is not the model-only effect**.
+
+![Validation WAPE comparison](docs/validation-wape.svg)
+
+![Matched-policy inventory cost comparison](docs/inventory-cost.svg)
+
+*Limitations:* All data and dollar figures are simulated. Demand is known in the simulator but would be censored by stockouts in real sales. Inventory uncertainty is heuristic, not calibrated; no lead times, ordering constraints, or deployment behavior are modeled. These are illustrative scenario costs, **not actual savings**.
+
+## Quick start
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+pip install -e '.[dev,boost]'
+retailiq --out artifacts
+pytest -q
+streamlit run dashboard.py
+```
+
+LightGBM is optional; without it, install `pip install -e '.[dev]'`. Model selection may then change.
 
 ## Business problem
 
@@ -70,19 +84,6 @@ For an estimated demand mean μ and heuristic standard deviation σ, the order-u
 
 where `Cu` is the unit underage penalty and `Co` the unit overage penalty. Defaults: **$12** and **$3** per unit, respectively. Uncertainty is an **assumed heuristic** `max(2, sqrt(predicted demand))`, not a calibrated prediction interval. The baseline orders the prior week's same-day demand (`lag_7`). Both policies are evaluated on the **same synthetic realized demand**. This comparison excludes lead times, minimum order quantities, fixed ordering costs, service-level guarantees, and supply-chain constraints.
 
-## Quick start
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-pip install -e '.[dev,boost]'
-retailiq --out artifacts
-pytest -q
-streamlit run dashboard.py
-```
-
-LightGBM is optional; the core pipeline works without it. To run without LightGBM, install `pip install -e '.[dev]'`. The checked-in `artifacts/` metrics are generated on the default seeded synthetic dataset.
-
 ## Docker
 
 ```bash
@@ -111,10 +112,6 @@ Dockerfile          reproducible dashboard container
 - **Why the critical ratio?** In the single-period newsvendor model, the optimal demand quantile balances the marginal underage penalty against the marginal overage penalty: `Cu / (Cu + Co)`.
 - **Why heuristic σ?** `max(2, sqrt(predicted demand))` is a deliberately simple scale assumption for a demonstration; it is **not** calibrated to residuals or a prediction interval. Consequently, inventory cost comparisons should not be treated as validated operational policy improvements.
 - **What is not evaluated?** Recursive forecasts, stockout-censored observed sales, lead times, real-world demand uncertainty, and deployment drift.
-
-## Reproducing the updated evaluation
-
-Run `retailiq --out artifacts` after installing the package to regenerate `metrics.json`, `inventory_summary.json`, and `inventory_decisions.csv`. The committed historical artifact values above are from the **previous two-policy run** until regenerated. The pipeline now produces three matched rows: (1) naive forecast ordered directly, (2) naive forecast with newsvendor safety stock, and (3) selected ML forecast with the **same** newsvendor safety-stock rule. The second versus third isolates the incremental forecast effect under this simplified policy. The simulator also stores its true expected demand as a noise-floor reference, and scores the naive forecast on the same holdout.
 
 ## Technical limitations and next steps
 
