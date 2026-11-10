@@ -30,7 +30,10 @@ def evaluate_inventory(test: pd.DataFrame, target: str = "latent_demand", undera
     frame["ml_stock"] = [optimal_stock(mu, sd, underage_cost, overage_cost)
                          for mu, sd in zip(frame.prediction, sigma)]
     frame["baseline_stock"] = np.maximum(0, np.ceil(frame.lag_7)).astype(int)
-    for prefix in ("ml", "baseline"):
+    naive_sigma = np.maximum(2., np.sqrt(np.maximum(frame.lag_7.to_numpy(dtype=float), 0)))
+    frame["naive_newsvendor_stock"] = [optimal_stock(mu, sd, underage_cost, overage_cost)
+                                       for mu, sd in zip(frame.lag_7, naive_sigma)]
+    for prefix in ("ml", "baseline", "naive_newsvendor"):
         stock = frame[f"{prefix}_stock"].to_numpy()
         actual = frame[target].to_numpy()
         frame[f"{prefix}_stockout_units"] = np.maximum(actual - stock, 0)
@@ -42,7 +45,12 @@ def evaluate_inventory(test: pd.DataFrame, target: str = "latent_demand", undera
 def summarize_inventory(frame: pd.DataFrame) -> dict:
     baseline = float(frame.baseline_cost.sum())
     proposed = float(frame.ml_cost.sum())
-    return {"baseline_cost": round(baseline, 2), "ml_cost": round(proposed, 2),
+    naive_policy = float(frame.naive_newsvendor_cost.sum())
+    return {"baseline_cost": round(baseline, 2), "naive_newsvendor_cost": round(naive_policy, 2),
+            "ml_cost": round(proposed, 2),
+            "policy_only_reduction_pct": round(100 * (baseline - naive_policy) / baseline, 2) if baseline else 0.,
+            "model_incremental_reduction_pct": round(100 * (naive_policy - proposed) / naive_policy, 2) if naive_policy else 0.,
+            "naive_newsvendor_stockout_units": int(frame.naive_newsvendor_stockout_units.sum()),
             "simulated_cost_reduction_pct": round(100 * (baseline - proposed) / baseline, 2) if baseline else 0.,
             "baseline_stockout_units": int(frame.baseline_stockout_units.sum()),
             "ml_stockout_units": int(frame.ml_stockout_units.sum()),
