@@ -34,7 +34,7 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Holdout WAPE", f"{metrics['wape']:.1%}")
 c2.metric("Holdout MAE", f"{metrics['mae']:.2f} units")
 c3.metric("Selected model", metrics["selected_model"])
-c4.metric("Simulated inventory cost change", f"{impact['simulated_cost_reduction_pct']:+.1f}% reduction")
+c4.metric("Model-only simulated cost change", f"{impact['model_incremental_reduction_pct']:+.1f}% reduction" if "model_incremental_reduction_pct" in impact else "Re-run pipeline")
 st.subheader("Actual vs predicted demand")
 series = filtered.groupby("date", as_index=False)[["latent_demand", "prediction"]].sum()
 long = series.melt(id_vars="date", var_name="Series", value_name="Units")
@@ -52,7 +52,8 @@ if store != "All":
     subset = subset[subset.store_id == store]
 if product != "All":
     subset = subset[subset.product_id == product]
-by_store = subset.groupby("store_id", as_index=False)[["ml_cost", "baseline_cost"]].sum()
+cost_cols = [c for c in ("baseline_cost", "naive_newsvendor_cost", "ml_cost") if c in subset.columns]
+by_store = subset.groupby("store_id", as_index=False)[cost_cols].sum()
 st.plotly_chart(px.bar(by_store.melt(id_vars="store_id", var_name="Decision rule", value_name="Hypothetical cost"),
                        x="store_id", y="Hypothetical cost", color="Decision rule", barmode="group"), use_container_width=True)
-st.info("Model forecasts use prior observed latent demand from a simulation. This is a one-step-ahead backtest, not a recursive 28-day production forecast. Cost parameters and uncertainty are illustrative; actual business impact is unverified.")
+st.info("Compare naive + newsvendor with ML + newsvendor to isolate the forecast contribution. Model forecasts use prior observed latent demand from a simulation. This is a one-step-ahead backtest, not a recursive 28-day production forecast. Cost parameters and uncertainty are illustrative; actual business impact is unverified.")
