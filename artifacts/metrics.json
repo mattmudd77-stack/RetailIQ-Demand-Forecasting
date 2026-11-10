@@ -3,6 +3,18 @@
   "rmse": 5.3177,
   "wape": 0.1743,
   "bias": 0.6368,
+  "seasonal_naive_holdout": {
+    "mae": 6.6762,
+    "rmse": 8.9075,
+    "wape": 0.2802,
+    "bias": 0.9068
+  },
+  "oracle_expected_demand_holdout": {
+    "mae": 3.75,
+    "rmse": 4.803,
+    "wape": 0.1574,
+    "bias": 0.0607
+  },
   "selected_model": "lightgbm",
   "target": "latent_demand",
   "validation_scheme": "two expanding folds + later holdout",
