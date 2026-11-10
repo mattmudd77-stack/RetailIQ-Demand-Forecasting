@@ -1,6 +1,10 @@
 {
-  "baseline_cost": 260493.0,
-  "ml_cost": 127911.0,
+  "baseline_cost": 260493,
+  "naive_newsvendor_cost": 211674,
+  "ml_cost": 127911,
+  "policy_only_reduction_pct": 18.74,
+  "model_incremental_reduction_pct": 39.57,
+  "naive_newsvendor_stockout_units": 7920,
   "simulated_cost_reduction_pct": 50.9,
   "baseline_stockout_units": 16339,
   "ml_stockout_units": 2636,
