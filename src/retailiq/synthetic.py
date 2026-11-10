@@ -31,6 +31,6 @@ def generate_data(days: int = 420, stores: int = 8, products: int = 12, seed: in
                 units_sold = min(demand, inventory_available)
                 rows.append((date, f"S{s+1:02d}", f"P{p+1:02d}", round(price * (.90 if promotion else 1), 2),
                              promotion, holiday, weekend, inventory_available, units_sold, demand,
-                             int(units_sold < demand)))
+                             int(units_sold < demand), float(expected)))
     return pd.DataFrame(rows, columns=["date", "store_id", "product_id", "price", "promotion", "holiday",
-                                        "weekend", "inventory_available", "units_sold", "latent_demand", "stockout"])
+                                        "weekend", "inventory_available", "units_sold", "latent_demand", "stockout", "expected_demand"])
