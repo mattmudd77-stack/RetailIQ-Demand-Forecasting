@@ -1,8 +1,37 @@
 # RetailIQ — Retail Demand Forecasting & Inventory Optimization
 
-**End-to-end Python ML engineering portfolio project** combining reproducible data simulation, SQL ingestion, leakage-aware time-series features, expanding-window model selection, a holdout backtest, a cost-sensitive inventory policy, and a Streamlit dashboard.
+**Forecast daily store–product demand and turn those predictions into inventory decisions.** RetailIQ combines a leakage-aware forecasting pipeline, temporal backtesting, SQL processing, and an interactive Streamlit dashboard. It compares machine-learning forecasts against a seasonal-naive baseline, then evaluates an illustrative cost-sensitive replenishment policy.
 
-> **Data provenance:** Every observation is **synthetic**. No Walmart, employer, customer, or proprietary data is included. Financial outcomes are **hypothetical scenario estimates**, not actual savings.
+**Data:** Deterministic synthetic retail demand; no proprietary or employer data is included. All financial outcomes are hypothetical simulations, not real savings.
+
+## Results at a glance
+
+The following results are from the checked-in seeded **synthetic** dataset. Model selection uses two expanding-window validation folds; the final holdout is later in time.
+
+| Forecast model | Mean validation WAPE ↓ |
+| --- | ---: |
+| Seasonal naive (same weekday last week, `lag_7`) | **28.71%** |
+| Random Forest | 18.70% |
+| Histogram Gradient Boosting | 18.59% |
+| **LightGBM (selected)** | **18.47%** |
+
+**Later holdout — selected LightGBM:** **17.43% WAPE**, **4.15 MAE**, **5.32 RMSE**, and **+0.64 mean bias**, across **5,664 store–SKU–day rows** (December 27, 2024–February 23, 2025). The seasonal-naive figure above is a *validation* score, **not** a measured baseline holdout score; don't interpret the difference as a holdout improvement.
+
+### Illustrative inventory simulation
+
+| Policy | Hypothetical total cost | Stockout units |
+| --- | ---: | ---: |
+| Seasonal-naive inventory baseline | $260,493 | 16,339 |
+| Model-based newsvendor policy | $127,911 | 2,636 |
+| **Difference** | **−$132,582 (−50.9%)** | **−13,703** |
+
+These are **simulated scenario outcomes**, not realized retailer savings. The policies are evaluated against the same synthetic demand, with simplified inventory assumptions and heuristic (uncalibrated) uncertainty.
+
+![Forecast model validation comparison](docs/validation-wape.svg)
+
+![Illustrative inventory cost comparison](docs/inventory-cost.svg)
+
+**Try it locally:** `pip install -e '.[dev,boost]'` → `retailiq --out artifacts` → `streamlit run dashboard.py`. No public hosted dashboard is currently claimed.
 
 ## Business problem
 
@@ -74,6 +103,14 @@ pyproject.toml      installable package + dependencies
 .github/workflows/  CI testing
 Dockerfile          reproducible dashboard container
 ```
+
+## What these results do—and do not—show
+
+- **Why WAPE?** It aggregates absolute forecast errors relative to aggregate demand, avoiding the division-by-zero instability of per-row MAPE on low or zero demand. It still emphasizes high-volume series.
+- **Why temporal validation?** Random splits would let later observations influence model selection for earlier dates. Every demand-derived lag or rolling feature uses observations strictly before the forecast date.
+- **Why the critical ratio?** In the single-period newsvendor model, the optimal demand quantile balances the marginal underage penalty against the marginal overage penalty: `Cu / (Cu + Co)`.
+- **Why heuristic σ?** `max(2, sqrt(predicted demand))` is a deliberately simple scale assumption for a demonstration; it is **not** calibrated to residuals or a prediction interval. Consequently, inventory cost comparisons should not be treated as validated operational policy improvements.
+- **What is not evaluated?** Recursive forecasts, stockout-censored observed sales, lead times, real-world demand uncertainty, and deployment drift.
 
 ## Technical limitations and next steps
 
