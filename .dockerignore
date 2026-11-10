@@ -1,0 +1,8 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+artifacts/*.joblib
+artifacts/*.db
+artifacts/synthetic_sales.csv
