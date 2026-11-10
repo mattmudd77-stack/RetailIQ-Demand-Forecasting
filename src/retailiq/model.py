@@ -79,6 +79,9 @@ def run_training(raw: pd.DataFrame, outdir: str | Path, seed: int = 42, target: 
         fitted.fit(history[FEATURES], history[target])
     test["prediction"] = predict(fitted, test)
     score = metrics(test[target], test.prediction)
+    score["seasonal_naive_holdout"] = metrics(test[target], predict(None, test))
+    if "expected_demand" in test:
+        score["oracle_expected_demand_holdout"] = metrics(test[target], test["expected_demand"])
     score.update({"selected_model": winner, "target": target, "validation_scheme": "two expanding folds + later holdout",
                   "forecast_scope": "one-step-ahead backtest with observed prior demand", "test_rows": len(test),
                   "test_start": str(pd.Timestamp(cut3).date()), "test_end": str(test.date.max().date())})
