@@ -1,0 +1,13 @@
+{
+  "mae": 4.1534,
+  "rmse": 5.3177,
+  "wape": 0.1743,
+  "bias": 0.6368,
+  "selected_model": "lightgbm",
+  "target": "latent_demand",
+  "validation_scheme": "two expanding folds + later holdout",
+  "forecast_scope": "one-step-ahead backtest with observed prior demand",
+  "test_rows": 5664,
+  "test_start": "2024-12-27",
+  "test_end": "2025-02-23"
+}
