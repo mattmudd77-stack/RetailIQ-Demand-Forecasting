@@ -15,7 +15,7 @@ The following results are from the checked-in seeded **synthetic** dataset. Mode
 | Histogram Gradient Boosting | 18.59% |
 | **LightGBM (selected)** | **18.47%** |
 
-**Later holdout — selected LightGBM:** **17.43% WAPE**, **4.15 MAE**, **5.32 RMSE**, and **+0.64 mean bias**, across **5,664 store–SKU–day rows** (December 27, 2024–February 23, 2025). The seasonal-naive figure above is a *validation* score, **not** a measured baseline holdout score; don't interpret the difference as a holdout improvement.
+**One-step-ahead historical holdout (uses observed prior-day demand) — selected LightGBM:** **17.43% WAPE**, **4.15 MAE**, **5.32 RMSE**, and **+0.64 mean bias**, across **5,664 store–SKU–day rows** (December 27, 2024–February 23, 2025). The seasonal-naive figure above is a *validation* score, **not** a measured baseline holdout score; don't interpret the difference as a holdout improvement. **Updated code now calculates the naive holdout WAPE and a simulator-only oracle (true Poisson mean) reference**; the values will appear in regenerated `artifacts/metrics.json`. The oracle is an informational noise-floor benchmark, not a deployable forecasting model. The three ML validation scores (18.47%, 18.59%, 18.70%) are close: LightGBM is the numerical winner, not evidence of a meaningful performance gap.
 
 ### Illustrative inventory simulation
 
@@ -23,9 +23,9 @@ The following results are from the checked-in seeded **synthetic** dataset. Mode
 | --- | ---: | ---: |
 | Seasonal-naive inventory baseline | $260,493 | 16,339 |
 | Model-based newsvendor policy | $127,911 | 2,636 |
-| **Difference** | **−$132,582 (−50.9%)** | **−13,703** |
+| **Difference (unadjusted policies)** | **−$132,582 (−50.9%)** | **−13,703** |
 
-These are **simulated scenario outcomes**, not realized retailer savings. The policies are evaluated against the same synthetic demand, with simplified inventory assumptions and heuristic (uncalibrated) uncertainty.
+**Important comparison caveat:** These checked-in figures compare a naive order-the-forecast policy **without** safety stock against ML + newsvendor **with** safety stock. They do **not** isolate the forecast model's incremental contribution. The updated pipeline now evaluates a third policy, **seasonal naive + the same newsvendor rule**. Run the pipeline to regenerate the three-way results before making any incremental-savings claim. These are simulated scenario outcomes, not realized retailer savings.
 
 ![Forecast model validation comparison](docs/validation-wape.svg)
 
@@ -111,6 +111,10 @@ Dockerfile          reproducible dashboard container
 - **Why the critical ratio?** In the single-period newsvendor model, the optimal demand quantile balances the marginal underage penalty against the marginal overage penalty: `Cu / (Cu + Co)`.
 - **Why heuristic σ?** `max(2, sqrt(predicted demand))` is a deliberately simple scale assumption for a demonstration; it is **not** calibrated to residuals or a prediction interval. Consequently, inventory cost comparisons should not be treated as validated operational policy improvements.
 - **What is not evaluated?** Recursive forecasts, stockout-censored observed sales, lead times, real-world demand uncertainty, and deployment drift.
+
+## Reproducing the updated evaluation
+
+Run `retailiq --out artifacts` after installing the package to regenerate `metrics.json`, `inventory_summary.json`, and `inventory_decisions.csv`. The committed historical artifact values above are from the **previous two-policy run** until regenerated. The pipeline now produces three matched rows: (1) naive forecast ordered directly, (2) naive forecast with newsvendor safety stock, and (3) selected ML forecast with the **same** newsvendor safety-stock rule. The second versus third isolates the incremental forecast effect under this simplified policy. The simulator also stores its true expected demand as a noise-floor reference, and scores the naive forecast on the same holdout.
 
 ## Technical limitations and next steps
 
