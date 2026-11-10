@@ -1,0 +1,5 @@
+model,validation_wape,fold_1_wape,fold_2_wape
+lightgbm,0.1847,0.1774,0.192
+hist_gradient_boosting,0.1859,0.1782,0.1935
+random_forest,0.187,0.1815,0.1925
+seasonal_naive,0.2871,0.2807,0.2935
