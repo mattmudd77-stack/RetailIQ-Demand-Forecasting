@@ -1,5 +1,6 @@
 # RetailIQ — Retail Demand Forecasting & Inventory Optimization
 This project predicts how much of each product a store will sell each day, then tests whether better predictions lead to better ordering decisions. On simulated data, the best model cut forecast error from 28% to 17% and cut simulated inventory costs by about 40% compared with a simple baseline using the same ordering rule.
+
 **Forecast daily store–product demand and turn those predictions into inventory decisions.** RetailIQ combines a leakage-aware forecasting pipeline, temporal backtesting, SQL processing, and an interactive Streamlit dashboard. It compares machine-learning forecasts against a seasonal-naive baseline, then evaluates an illustrative cost-sensitive replenishment policy.
 
 **Data:** Deterministic synthetic retail demand; no proprietary or employer data is included. All financial outcomes are hypothetical simulations, not real savings.
