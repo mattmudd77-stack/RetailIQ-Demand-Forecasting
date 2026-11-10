@@ -1,0 +1,8 @@
+{
+  "baseline_cost": 260493.0,
+  "ml_cost": 127911.0,
+  "simulated_cost_reduction_pct": 50.9,
+  "baseline_stockout_units": 16339,
+  "ml_stockout_units": 2636,
+  "note": "Hypothetical costs on synthetic data; not observed financial savings."
+}
